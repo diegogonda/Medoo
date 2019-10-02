@@ -1490,9 +1490,9 @@ class Medoo {
         return $datos;
     }
 
-    public function castDatos($data, $columns) {
+    public function castDatos($data, $columns, $root) {
         $column_map = [];
-        $map = $this->columnMap($columns, $column_map);
+        $map = $this->columnMap($columns, $column_map, $root);
         foreach ($data as $key => $value) {
             $currentStack = [];
             $currentType = gettype($value);
