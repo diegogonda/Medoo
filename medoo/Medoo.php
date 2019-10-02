@@ -19,6 +19,7 @@ use InvalidArgumentException;
 class Medoo {
 
     use SchemaTrait;
+    use CastTrait;
 
     public $pdo;
     protected $type;
@@ -1488,19 +1489,6 @@ class Medoo {
             }
         }
         return $datos;
-    }
-
-    public function castDatos($data, $columns, $root) {
-        $column_map = [];
-        $map = $this->columnMap($columns, $column_map, $root);
-        foreach ($data as $key => $value) {
-            $currentStack = [];
-            $currentType = gettype($value);
-            $this->dataMap((array) $value, $columns, $map, $currentStack);
-            settype($currentStack, $currentType);
-            $data[$key] = $currentStack;
-        }
-        return $data;
     }
 
     private function addPrefixQuery(string $query) {
