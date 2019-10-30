@@ -1010,9 +1010,9 @@ class Medoo {
                         case 'JSON':
                         case 'String':
                             $decoded = json_decode($item);
-                            $stack[$column_key] = is_null($decoded) ?
-                                    $item :
-                                    $decoded;
+                            $stack[$column_key] = (is_object($decoded) || is_array($decoded)) ?
+                                    $decoded :
+                                    $item;
                             break;
                     }
                 } else {
