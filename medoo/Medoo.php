@@ -21,6 +21,7 @@ class Medoo {
     use SchemaTrait;
     use CastTrait;
     use ConnectPriorTrait;
+    use Maintenance;
 
     public $pdo;
     protected $type;
