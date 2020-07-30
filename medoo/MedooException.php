@@ -1,5 +1,6 @@
 <?php
 
+namespace Medoo;
 use Medoo\tools\StatusTypes;
 
 class MedooException extends Exception {
