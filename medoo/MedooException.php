@@ -3,7 +3,7 @@
 namespace Medoo;
 use Medoo\tools\StatusTypes;
 
-class MedooException extends Exception {
+class MedooException extends \Exception {
     public function __construct($message, $code, $errorType, int $status = 0, $hint = null, Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
         $this->status = $status;

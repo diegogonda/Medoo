@@ -16,7 +16,7 @@ use Exception;
 use PDOException;
 use InvalidArgumentException;
 use Medoo\tools\DebugFileTypes;
-use MedooException;
+use Medoo\MedooException;
 
 class Medoo {
 
