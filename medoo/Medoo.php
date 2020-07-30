@@ -15,6 +15,7 @@ use PDO;
 use Exception;
 use PDOException;
 use InvalidArgumentException;
+use Medoo\tools\DebugFileTypes;
 
 class Medoo {
 
@@ -32,6 +33,7 @@ class Medoo {
     protected $logging = false;
     protected $debug_mode = false;
     protected $debug_file = null;
+    protected $debug_file_type = null;
     protected $guid = 0;
     protected $databasename;
 
@@ -278,7 +280,12 @@ class Medoo {
         }
         // 2020-07-30: Añado la opción de insertar los logs de desarrollo en un fichero
         if (isset($options['debug-file'])) {
+            $this->debug_mode = true;
             $this->debug_file = $options['debug-file'];
+            $this->debug_file_type = DebugFileTypes::_DEFAULT;
+            if (isset ($options['debug-file-mode'])) {
+                $this->debug_file_type = $options['debug-file-mode'];
+            }
         }
     }
 
@@ -294,6 +301,10 @@ class Medoo {
         if ($this->debug_mode) {
             if (is_string($this->debug_file)) {
                 file_put_contents($this->debug_file, $this->generate($query, $map) . PHP_EOL, FILE_APPEND);
+                // Sólo queremos loguar la primera query
+                if ($this->debug_file_type === DebugFileTypes::SINGLE) {
+                    $this->debug_mode = false;
+                }
             } else {
                 echo $this->generate($query, $map);
                 $this->debug_mode = false;
