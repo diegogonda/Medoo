@@ -100,3 +100,29 @@ Medoo is under the MIT license.
 * Official website: [https://medoo.in](https://medoo.in)
 
 * Documentation: [https://medoo.in/doc](https://medoo.in/doc)
+
+
+# Debug file
+Se puede indicar un fichero en que se almacenarán las querys que se ejecuten. Esta opción deshabilita automáticamente la opción de ->debug() que trae la librería por defecto
+ 
+Ejemplo: 
+```php
+$medoo = new Medoo([
+    'database_type' => 'mysql',
+    'database_name' => 'database',
+    'server' => 'localhost',
+    'username' => '',
+    'password' => '',
+    'prefix' => 'prefix_',
+    'debug-file' => [
+        // Nombre del fichero donde almacenaremos los logs
+        'filename' => 'log.log',
+        // Tipo de log que podemos usar
+        'type' => DebugFileTypes::ALL,
+        // Añade el backtrace al log para saber dónde se está ejecutando
+        'with-backtrace' => false,
+        // purgar el fichero de log antes de ejecutar las querys
+        'purge-on-init' => true
+    ],
+]);
+```

@@ -14,6 +14,13 @@ Los tipos que se tendran encuenta en este registro son:
 ```Security``` vulnerabilidades.
 
 
+[0.2.0]
+# Added
+- Log en fichero con posibilidad de
+    - Insertar la primera o todas las querys
+    - Insertar la ruta que sigue el programa antes de ejecutar una query
+    - Borrar el log antes de volver a ejecutar
+
 [0.1.0]
 # Added
 - Consultas a procedures de la base de datos
