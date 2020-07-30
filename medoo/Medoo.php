@@ -31,6 +31,7 @@ class Medoo {
     protected $logs = [];
     protected $logging = false;
     protected $debug_mode = false;
+    protected $debug_file = null;
     protected $guid = 0;
     protected $databasename;
 
@@ -94,8 +95,8 @@ class Medoo {
             }
         } else {
             if (
-                    isset($options['port']) &&
-                    is_int($options['port'] * 1)
+                isset($options['port']) &&
+                is_int($options['port'] * 1)
             ) {
                 $port = $options['port'];
             }
@@ -151,8 +152,8 @@ class Medoo {
                     $attr = [
                         'driver' => 'oci',
                         'dbname' => $options['server'] ?
-                        '//' . $options['server'] . ($is_port ? ':' . $port : ':1521') . '/' . $options['database_name'] :
-                        $options['database_name']
+                            '//' . $options['server'] . ($is_port ? ':' . $port : ':1521') . '/' . $options['database_name'] :
+                            $options['database_name']
                     ];
 
                     if (isset($options['charset'])) {
@@ -252,23 +253,21 @@ class Medoo {
         $dsn = $driver . ':' . implode(';', $stack);
 
         if (
-                in_array($this->type, ['mysql', 'pgsql', 'sybase', 'mssql']) &&
-                isset($options['charset'])
+            in_array($this->type, ['mysql', 'pgsql', 'sybase', 'mssql']) &&
+            isset($options['charset'])
         ) {
-            $commands[] = "SET NAMES '{$options['charset']}'" . (
-                    $this->type === 'mysql' && isset($options['collation']) ?
-                    " COLLATE '{$options['collation']}'" : ''
-                    );
+            $commands[] = "SET NAMES '{$options['charset']}'" . ($this->type === 'mysql' && isset($options['collation']) ?
+                " COLLATE '{$options['collation']}'" : '');
         }
 
         $this->dsn = $dsn;
 
         try {
             $this->pdo = new PDO(
-                    $dsn,
-                    isset($options['username']) ? $options['username'] : null,
-                    isset($options['password']) ? $options['password'] : null,
-                    $option
+                $dsn,
+                isset($options['username']) ? $options['username'] : null,
+                isset($options['password']) ? $options['password'] : null,
+                $option
             );
 
             foreach ($commands as $value) {
@@ -276,6 +275,10 @@ class Medoo {
             }
         } catch (PDOException $e) {
             throw new PDOException($e->getMessage());
+        }
+        // 2020-07-30: Añado la opción de insertar los logs de desarrollo en un fichero
+        if (isset($options['debug-file'])) {
+            $this->debug_file = $options['debug-file'];
         }
     }
 
@@ -289,11 +292,14 @@ class Medoo {
 
     public function exec($query, $map = []) {
         if ($this->debug_mode) {
-            echo $this->generate($query, $map);
+            if (is_string($this->debug_file)) {
+                file_put_contents($this->debug_file, $this->generate($query, $map) . PHP_EOL, FILE_APPEND);
+            } else {
+                echo $this->generate($query, $map);
+                $this->debug_mode = false;
+                return false;
+            }
 
-            $this->debug_mode = false;
-
-            return false;
         }
 
         if ($this->logging) {
@@ -326,9 +332,9 @@ class Medoo {
         ];
 
         $query = preg_replace(
-                '/"([a-zA-Z0-9_]+)"/i',
-                isset($identifier[$this->type]) ? $identifier[$this->type] : '"$1"',
-                $query
+            '/"([a-zA-Z0-9_]+)"/i',
+            isset($identifier[$this->type]) ? $identifier[$this->type] : '"$1"',
+            $query
         );
 
         foreach ($map as $key => $value) {
@@ -367,15 +373,16 @@ class Medoo {
         }
 
         $query = preg_replace_callback(
-                '/((FROM|TABLE|INTO|UPDATE)\s*)?\<([a-zA-Z0-9_\.]+)\>/i',
-                function ($matches) {
-            if (!empty($matches[2])) {
-                return $matches[2] . ' ' . $this->tableQuote($matches[3]);
-            }
+            '/((FROM|TABLE|INTO|UPDATE)\s*)?\<([a-zA-Z0-9_\.]+)\>/i',
+            function ($matches) {
+                if (!empty($matches[2])) {
+                    return $matches[2] . ' ' . $this->tableQuote($matches[3]);
+                }
 
-            return $this->columnQuote($matches[3]);
-        },
-                $raw->value);
+                return $this->columnQuote($matches[3]);
+            },
+            $raw->value
+        );
 
         $raw_map = $raw->map;
 
@@ -501,14 +508,14 @@ class Medoo {
             $type = gettype($value);
 
             if (
-                    $type === 'array' &&
-                    preg_match("/^(AND|OR)(\s+#.*)?$/", $key, $relation_match)
+                $type === 'array' &&
+                preg_match("/^(AND|OR)(\s+#.*)?$/", $key, $relation_match)
             ) {
                 $relationship = $relation_match[1];
 
                 $stack[] = $value !== array_keys(array_keys($value)) ?
-                        '(' . $this->dataImplode($value, $map, ' ' . $relationship) . ')' :
-                        '(' . $this->innerConjunct($value, $map, ' ' . $relationship, $conjunctor) . ')';
+                    '(' . $this->dataImplode($value, $map, ' ' . $relationship) . ')' :
+                    '(' . $this->innerConjunct($value, $map, ' ' . $relationship, $conjunctor) . ')';
 
                 continue;
             }
@@ -516,8 +523,8 @@ class Medoo {
             $map_key = $this->mapKey();
 
             if (
-                    is_int($key) &&
-                    preg_match('/([a-zA-Z0-9_\.]+)\[(?<operator>\>\=?|\<\=?|\!?\=)\]([a-zA-Z0-9_\.]+)/i', $value, $match)
+                is_int($key) &&
+                preg_match('/([a-zA-Z0-9_\.]+)\[(?<operator>\>\=?|\<\=?|\!?\=)\]([a-zA-Z0-9_\.]+)/i', $value, $match)
             ) {
                 $stack[] = $this->columnQuote($match[1]) . ' ' . $match['operator'] . ' ' . $this->columnQuote($match[3]);
             } else {
@@ -667,7 +674,7 @@ class Medoo {
             $where_keys = array_keys($where);
 
             $conditions = array_diff_key($where, array_flip(
-                            ['GROUP', 'ORDER', 'HAVING', 'LIMIT', 'LIKE', 'MATCH']
+                ['GROUP', 'ORDER', 'HAVING', 'LIMIT', 'LIKE', 'MATCH']
             ));
 
             if (!empty($conditions)) {
@@ -749,8 +756,8 @@ class Medoo {
                 }
 
                 if (
-                        isset($where['LIMIT']) &&
-                        in_array($this->type, ['oracle', 'mssql'])
+                    isset($where['LIMIT']) &&
+                    in_array($this->type, ['oracle', 'mssql'])
                 ) {
                     $LIMIT = $where['LIMIT'];
 
@@ -759,9 +766,9 @@ class Medoo {
                     }
 
                     if (
-                            is_array($LIMIT) &&
-                            is_numeric($LIMIT[0]) &&
-                            is_numeric($LIMIT[1])
+                        is_array($LIMIT) &&
+                        is_numeric($LIMIT[0]) &&
+                        is_numeric($LIMIT[1])
                     ) {
                         $where_clause .= ' OFFSET ' . $LIMIT[0] . ' ROWS FETCH NEXT ' . $LIMIT[1] . ' ROWS ONLY';
                     }
@@ -774,9 +781,9 @@ class Medoo {
                 if (is_numeric($LIMIT)) {
                     $where_clause .= ' LIMIT ' . $LIMIT;
                 } elseif (
-                        is_array($LIMIT) &&
-                        is_numeric($LIMIT[0]) &&
-                        is_numeric($LIMIT[1])
+                    is_array($LIMIT) &&
+                    is_numeric($LIMIT[0]) &&
+                    is_numeric($LIMIT[1])
                 ) {
                     $where_clause .= ' LIMIT ' . $LIMIT[1] . ' OFFSET ' . $LIMIT[0];
                 }
@@ -805,16 +812,16 @@ class Medoo {
         $join_key = is_array($join) ? array_keys($join) : null;
 
         if (
-                isset($join_key[0]) &&
-                strpos($join_key[0], '[') === 0
+            isset($join_key[0]) &&
+            strpos($join_key[0], '[') === 0
         ) {
             $is_join = true;
             $table_query .= ' ' . $this->buildJoin($table, $join);
         } else {
             if (is_null($columns)) {
                 if (
-                        !is_null($where) ||
-                        (is_array($join) && isset($column_fn))
+                    !is_null($where) ||
+                    (is_array($join) && isset($column_fn))
                 ) {
                     $where = $join;
                     $columns = null;
@@ -878,15 +885,13 @@ class Medoo {
                         $joins = [];
 
                         foreach ($relation as $key => $value) {
-                            $joins[] = (
-                                    strpos($key, '.') > 0 ?
-                                    // For ['tableB.column' => 'column']
-                                    $this->columnQuote($key) :
-                                    // For ['column1' => 'column2']
-                                    $table . '."' . $key . '"'
-                                    ) .
-                                    ' = ' .
-                                    $this->tableQuote(isset($match['alias']) ? $match['alias'] : $match['table']) . '."' . $value . '"';
+                            $joins[] = (strpos($key, '.') > 0 ?
+                                // For ['tableB.column' => 'column']
+                                $this->columnQuote($key) :
+                                // For ['column1' => 'column2']
+                                $table . '."' . $key . '"') .
+                                ' = ' .
+                                $this->tableQuote(isset($match['alias']) ? $match['alias'] : $match['table']) . '."' . $value . '"';
                         }
 
                         $relation = 'ON ' . implode(' AND ', $joins);
@@ -916,8 +921,8 @@ class Medoo {
                 preg_match('/([a-zA-Z0-9_]+\.)?(?<column>[a-zA-Z0-9_]+)(?:\s*\((?<alias>[a-zA-Z0-9_]+)\))?(?:\s*\[(?<type>(?:String|Bool|Int|Number|Object|JSON))\])?/i', $value, $key_match);
 
                 $column_key = !empty($key_match['alias']) ?
-                        $key_match['alias'] :
-                        $key_match['column'];
+                    $key_match['alias'] :
+                    $key_match['column'];
 
                 if (isset($key_match['type'])) {
                     $stack[$value] = [$column_key, $key_match['type']];
@@ -996,7 +1001,7 @@ class Medoo {
 
                     switch ($map[1]) {
                         case 'Number':
-                            $stack[$column_key] = (double) $item;
+                            $stack[$column_key] = (float) $item;
                             break;
 
                         case 'Int':
@@ -1012,8 +1017,8 @@ class Medoo {
                         case 'String':
                             $decoded = json_decode($item);
                             $stack[$column_key] = (is_object($decoded) || is_array($decoded)) ?
-                                    $decoded :
-                                    $item;
+                                $decoded :
+                                $item;
                             break;
                     }
                 } else {
@@ -1433,10 +1438,11 @@ class Medoo {
     }
 
     public function log() {
-        return array_map(function ($log) {
-            return $this->generate($log[0], $log[1]);
-        },
-                $this->logs
+        return array_map(
+            function ($log) {
+                return $this->generate($log[0], $log[1]);
+            },
+            $this->logs
         );
     }
 
@@ -1467,7 +1473,7 @@ class Medoo {
         return $this->databasename;
     }
 
-    public function call(string $procedure, Array $parametros, $mostrarQuery = false) {
+    public function call(string $procedure, array $parametros, $mostrarQuery = false) {
         $parametrosSQL = implode(", ", $parametros);
         $sql = "call $this->prefix$procedure($parametrosSQL)";
         if ($mostrarQuery) {
@@ -1480,7 +1486,7 @@ class Medoo {
         return $datos;
     }
 
-    public function consulta(string $query, Array $columns = []) {
+    public function consulta(string $query, array $columns = []) {
         $queryConPrefijo = $this->addPrefixQuery($query);
         $sub = $this->query($queryConPrefijo);
         $datos = $sub;
@@ -1506,5 +1512,4 @@ class Medoo {
         }
         return preg_replace($patrones, $replacement, $query);
     }
-
 }
