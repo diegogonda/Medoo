@@ -15,7 +15,9 @@ use PDO;
 use Exception;
 use PDOException;
 use InvalidArgumentException;
-use Medoo\tools\DebugFileTypes;
+use Medoo\tools\DebugShowQuerys;
+use Medoo\tools\StdoutTypes;
+use Medoo\tools\DebugModeTrait;
 use Medoo\MedooException;
 
 class Medoo {
@@ -24,6 +26,7 @@ class Medoo {
     use CastTrait;
     use ConnectPriorTrait;
     use Maintenance;
+    use DebugModeTrait;
 
     public $pdo;
     protected $type;
@@ -32,16 +35,6 @@ class Medoo {
     protected $dsn;
     protected $logs = [];
     protected $logging = false;
-    protected $debug_mode = false;
-    /**
-     * Insertar las querys que se ejecuten en un fichero dado
-     *  # file : nombre del fichero
-     *  # type : tipo de registro (todas, solo una, otros..)
-     *  # backtrace : se almacenan también la ruta de ficheros
-     */
-    protected $debug_file = null;
-    protected $debug_file_type = null;
-    protected $debug_file_backtrace = false;
     protected $guid = 0;
     protected $databasename;
 
@@ -287,22 +280,11 @@ class Medoo {
             throw new PDOException($e->getMessage());
         }
         // 2020-07-30: Añado la opción de insertar los logs de desarrollo en un fichero
-        if (isset($options['debug-file'])) {
-            $this->debug_mode = true;
-            $this->debug_file = $options['debug-file']['filename'];
-            $this->debug_file_type = DebugFileTypes::_DEFAULT;
-            if(!is_writable($this->debug_file)) {
-                throw MedooException::debugFileNotWritable("No permite la escritura en '$this->debug_file'");
+        if (isset($options['debug'])) {
+            if (!is_array($options['debug'])) {
+                throw MedooException::debugModeConfigError("La configuración debug indicada es incorrecta");
             }
-            if (isset($options['debug-file']['type'])) {
-                $this->debug_file_type = $options['debug-file']['type'];
-            }
-            if (isset($options['debug-file']['with-backtrace'])) {
-                $this->debug_file_backtrace = $options['debug-file']['with-backtrace'];
-            }
-            if (isset($options['debug-file']['purge-on-init']) && $options['debug-file']['purge-on-init'] === TRUE && is_file($this->debug_file)) {
-                unlink($this->debug_file);
-            }
+            $this->debugMode($options['debug']);
         }
     }
 
@@ -316,26 +298,7 @@ class Medoo {
 
     public function exec($query, $map = []) {
         if ($this->debug_mode) {
-            if (is_string($this->debug_file)) {
-                $date = date('Y-m-d H:i:s');
-                $sql = $this->generate($query, $map);
-                file_put_contents($this->debug_file, "[$date] $sql" . PHP_EOL, FILE_APPEND);
-                if ($this->debug_file_backtrace) {
-                    $backtrace = debug_backtrace();
-                    foreach ($backtrace as $bt) {
-                        $data = json_encode($bt);
-                        file_put_contents($this->debug_file, "\t$data" . PHP_EOL, FILE_APPEND);
-                    }
-                }
-                // Sólo queremos loguar la primera query
-                if ($this->debug_file_type === DebugFileTypes::SINGLE) {
-                    $this->debug_mode = false;
-                }
-            } else {
-                echo $this->generate($query, $map);
-                $this->debug_mode = false;
-                return false;
-            }
+            $this->print($query, $map);
         }
 
         if ($this->logging) {
@@ -1458,7 +1421,10 @@ class Medoo {
     }
 
     public function debug() {
-        $this->debug_mode = true;
+        $this->debugMode([
+            'stdout' => StdoutTypes::PHP_ECHO,
+            'show-querys' => DebugShowQuerys::SINGLE
+        ]);
 
         return $this;
     }

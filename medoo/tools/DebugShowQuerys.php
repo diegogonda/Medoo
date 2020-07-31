@@ -2,7 +2,7 @@
 
 namespace Medoo\tools;
 
-class DebugFileTypes {
+class DebugShowQuerys {
     
     const SINGLE = 0; // Imprime la query actual en el fichero de log
     const ALL = 1; //  Imprime todas las querys en el fichero de log

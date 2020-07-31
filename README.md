@@ -114,14 +114,18 @@ $medoo = new Medoo([
     'username' => '',
     'password' => '',
     'prefix' => 'prefix_',
-    'debug-file' => [
+    'debug' => [
+        // Options: PHP_ECHO || FILE
+        'stdout' => StdoutTypes::PHP_ECHO,
         // Nombre del fichero donde almacenaremos los logs
         'filename' => 'log.log',
-        // Tipo de log que podemos usar
-        'type' => DebugFileTypes::ALL,
-        // Añade el backtrace al log para saber dónde se está ejecutando
-        'with-backtrace' => false,
-        // purgar el fichero de log antes de ejecutar las querys
+        // Cambiar el salgo de linea
+        'newline' => PHP_EOL,
+        // Cantidad de querys a mostrar: ALL || SINGLe
+        'show-querys' => DebugShowQuerys::SINGLE,
+        // Mostrar la traza PHP hasta la query
+        'with-backtrace' => true,
+        // Solo para debug en fichero: Borrar el fichero antes de ejecutar
         'purge-on-init' => true
     ],
 ]);

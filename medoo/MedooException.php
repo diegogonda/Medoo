@@ -18,7 +18,15 @@ class MedooException extends \Exception {
         }
     }
 
+    public static function debugFileNotSet(string $message) {
+        return new static($message, StatusTypes::DEBUG_FILE_NOT_SET, 'debug_file_not_set');
+    }
+
     public static function debugFileNotWritable(string $message) {
         return new static($message, StatusTypes::DEBUG_FILE_NOT_WRITABLE, 'debug_file_not_writable');
+    }
+
+    public static function debugModeConfigError(string $message) {
+        return new static($message, StatusTypes::DEBUG_MODE_CONFIG_ERROR, 'debug_mode_config_error');
     }
 }
