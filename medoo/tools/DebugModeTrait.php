@@ -29,6 +29,16 @@ trait DebugModeTrait {
             if (!isset($config['filename'])) {
                 throw MedooException::debugFileNotSet("Debes indicar un fichero de log");
             }
+            $dirname = dirname($config['filename']);
+            if (!is_dir($dirname)) {
+                throw MedooException::debugFileDirNotExists("No existe la direccion '$dirname'");
+            }
+            if (!file_exists($config['filename'])) {
+                $touched = touch($config['filename']);
+                if (!$touched) {
+                    throw MedooException::debugFileCannotCreate("No se ha creado el fichero '" . $config['filename'] . "'");
+                }
+            }
             if (!is_writable($config['filename'])) {
                 throw MedooException::debugFileNotWritable("No permite la escritura en '" . $config['filename'] . "'");
             }
@@ -53,7 +63,7 @@ trait DebugModeTrait {
         $log = '';
         $date = date('Y-m-d H:i:s');
         $sql = $this->generate($query, $map);
-        $log .= "[$date] $sql" . $this->debug_newline;
+        $log .= "[$date] $sql;" . $this->debug_newline;
         if ($this->debug_file_backtrace) {
             $backtrace = debug_backtrace();
             foreach ($backtrace as $bt) {
