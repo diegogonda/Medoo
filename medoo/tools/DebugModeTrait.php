@@ -2,7 +2,9 @@
 
 namespace Medoo\tools;
 
+use Exception;
 use Medoo\MedooException;
+use RuntimeException;
 
 trait DebugModeTrait {
 
@@ -52,7 +54,11 @@ trait DebugModeTrait {
             $this->debug_file_backtrace = $config['with-backtrace'];
         }
         if (isset($config['purge-on-init']) && $config['purge-on-init'] === TRUE && is_file($this->debug_file)) {
-            unlink($this->debug_file);
+            try {
+                unlink($this->debug_file);
+            } catch (RuntimeException | Exception $e) {
+
+            }
         }
         if (isset($config['newline'])) {
             $this->debug_newline = $config['newline'];
