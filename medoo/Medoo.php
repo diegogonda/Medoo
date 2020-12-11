@@ -426,12 +426,14 @@ class Medoo {
         return [$value, $map[$type]];
     }
 
-    protected function columnQuote($string) {
+    protected function columnQuote($string, string $qoute = '"') {
         if (strpos($string, '.') !== false) {
-            return '"' . $this->prefix . str_replace('.', '"."', $string) . '"';
+            return $qoute . $this->prefix . str_replace('.', $qoute . '.' . $qoute, $string) . $qoute;
+        } else if(is_null($string)) {
+            return 'null';
         }
 
-        return '"' . $string . '"';
+        return "$qoute$string$qoute";
     }
 
     protected function columnPush(&$columns, &$map, $root, $is_join = false) {
@@ -1475,14 +1477,16 @@ class Medoo {
         return $this->databasename;
     }
 
-    public function call(string $procedure, array $parametros, $mostrarQuery = false) {
-        $parametrosSQL = implode(", ", $parametros);
-        $sql = "call $this->prefix$procedure($parametrosSQL)";
-        if ($mostrarQuery) {
-            echo $sql;
-            exit();
-        }
-        $statement = $this->query($sql);
+    public function call(string $procedure, array $parametros) {
+        $ctx =  $this;
+        $maped = array_map(function ($param) use ($ctx) {
+            return $ctx->columnQuote($param, "'");
+        }, $parametros);
+        
+        $parametrosSQL = implode(", ", $maped);
+
+        $sql = 'call ' . $this->prefix . $procedure . '(' . $parametrosSQL . ')';
+        $statement = $this->exec($sql);
         $datos = $statement->fetchAll();
         $statement->closeCursor();
         return $datos;
